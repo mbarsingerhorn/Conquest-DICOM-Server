@@ -1216,6 +1216,7 @@ Spectra0013 Wed, 5 Feb 2014 16:57:49 -0200: Fix cppcheck bugs #8 e #9
 20240924        mvh     Added lncoll message on rewrite
 20240924        mvh     Read level and window as float and round to int in convert_to_gif etc
 20240925        mvh     ---- RELEASE 1.5.0e -----
+20250405        mvh     Retry database connection in monitorthread
 
 ENDOFUPDATEHISTORY
 */
@@ -12999,13 +13000,16 @@ SaveToDisk(Database	*DB, DICOMCommandObject *DCO, DICOMDataObject	*DDOPtr, char 
 
 static BOOL WINAPI monitorthread(char *folder)
 { Database DB;
+  int count=10;
   ExtendedPDU_Service PDU; // for script context of monitoring thread
   PDU.SetLocalAddress ( (BYTE *)"monitor" );
   PDU.SetRemoteAddress ( (BYTE *)"monitor" );
-  if (!DB.Open ( DataSource, UserName, Password, DataHost ) )
+  while (!DB.Open ( DataSource, UserName, Password, DataHost ) )
 	{
-	OperatorConsole.printf("***Error Connecting to SQL\n");
-	return ( FALSE );
+	count++;
+	OperatorConsole.printf("***Monitorthread: error Connecting to SQL\n");
+	Sleep(1000);
+	if (count==10) return ( FALSE );
 	}
 
   while (TRUE)
