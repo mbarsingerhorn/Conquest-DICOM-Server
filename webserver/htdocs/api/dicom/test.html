@@ -174,4 +174,14 @@ function thumbnailinstance() {
   <tr><td><input type=button onclick=thumbnailinstance()>/api/dicom/rs/studies/*first*/series/*first*/instances/*first*/thumbnail</input><td><div style="display:inline-block" id=thumbnailinstance></div></tr>
   </table>
 </form>
+<FORM ACTION="/api/dicom/rs/attach" METHOD=POST ENCTYPE="multipart/form-data">
+<INPUT NAME=xscript  TYPE=HIDDEN VALUE=reject>
+Upload file to enter into server (dcm/v2/HL7/zip/7z/gz/tar): <INPUT NAME=filetoupload SIZE=40 TYPE=file VALUE=>
+<INPUT TYPE=SUBMIT VALUE=Go>
+</FORM>
+<FORM ACTION="/api/dicom/rs/attachdicom" METHOD=POST ENCTYPE="multipart/form-data">
+<INPUT NAME=script  TYPE=HIDDEN VALUE=Data:AddImage();return(1)>
+Upload dicom file to enter into server (dcm): <INPUT NAME=filetoupload SIZE=40 TYPE=file VALUE=>
+<INPUT TYPE=SUBMIT VALUE=Go>
+</FORM>
 </html>

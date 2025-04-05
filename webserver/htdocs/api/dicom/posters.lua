@@ -1,4 +1,5 @@
 -- mvh 20230620 fix for linux (/ vs \)
+-- mvh 20250405 Catch null return from servercommand
 
 function iowrite(a)
   if io then io.write(a)
@@ -20,7 +21,7 @@ function attachfile(path, script, ext)
     servercommand('attachfile:'..filename..','..script)
     os.remove(filename);
   ]]
-  iowrite(servercommand('lua:'..remotecode, '<'..path))
+  iowrite(servercommand('lua:'..remotecode, '<'..path) or '')
 end
 
 -- add and process a dicom file stored in path
@@ -39,7 +40,7 @@ function attachdicomfile(path, script)
     os.remove(filename);
     return loadstring(script)()
   ]]
-  iowrite(servercommand('lua:'..remotecode, '<'..path))
+  iowrite(servercommand('lua:'..remotecode, '<'..path) or '')
 end
 
 -- STOW a single dicom object stored in path; fix its PatientName and PatientID
@@ -74,7 +75,7 @@ function runscript(script)
     os.remove(filename);
     return a
   ]]
-  iowrite(servercommand('lua:'..remotecode, '<'..script));
+  iowrite(servercommand('lua:'..remotecode, '<'..script) or '');
 end
 
 -- start a script as background task in the server; return uid of job
@@ -115,7 +116,7 @@ function readprogress(uid)
     return tonumber(s) or 0
   ]]
   local s = servercommand('lua:'..remotecode);
-  iowrite(s)
+  iowrite(s or '')
 end
 
 -- write progress value of job (0 started, to 100 end)
@@ -132,5 +133,5 @@ function writeprogress(uid, val)
     return val
   ]]
   local s = servercommand('lua:'..remotecode);
-  iowrite(s)
+  iowrite(s or '')
 end
