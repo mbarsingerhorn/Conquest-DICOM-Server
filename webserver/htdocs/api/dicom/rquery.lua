@@ -3,6 +3,7 @@
 -- 20220919 mvh only provide rquery; used for all queries; 
 -- 20221017 mvh added remotemove, remotezip, remotemodalities
 -- 20230808 mvh added \r\n before boundary - missed by weasis loader
+-- 20250326 mvh fix on iowrite getting NUL by SM1312
 
 function iowrite(a)
   if io then io.write(a)
@@ -143,7 +144,7 @@ function remotemodalities()
   end
   return JSON:encode(t)
 ]]
-  iowrite(servercommand('lua:'..remotecode))
+  iowrite(servercommand('lua:'..remotecode) or '')
 end
 
 function remoteecho(server)
@@ -158,12 +159,12 @@ function remotemove(from, to, q)
   local remotecode =
 [[
   local from=']]..from..[[';
-  if from=='null' then from=Global.MyACRNema end
+  if from=='null' or from=='' then from=Global.MyACRNema end
   local to=']]..to..[[';
   local q=DicomObject:new(']]..q..[[');
   return dicommove(from, to, q, 0);
 ]]
-  iowrite(servercommand('lua:'..remotecode))
+  iowrite(servercommand('lua:'..remotecode) or '')
 end
 
 function remotezip(patid, studyuid, serieuid, instuid, script)
