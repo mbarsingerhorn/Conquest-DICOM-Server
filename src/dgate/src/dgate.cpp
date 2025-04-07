@@ -1217,6 +1217,7 @@ Spectra0013 Wed, 5 Feb 2014 16:57:49 -0200: Fix cppcheck bugs #8 e #9
 20240924        mvh     Read level and window as float and round to int in convert_to_gif etc
 20240925        mvh     ---- RELEASE 1.5.0e -----
 20250405        mvh     Retry database connection in monitorthread
+20250407        mvh     Pass e.g. ExportConverter5 = forward study xxx to separate prefetch_queue 6
 
 ENDOFUPDATEHISTORY
 */
@@ -4616,7 +4617,7 @@ int TestFilter(char *query, char *sop, int maxname, char *patid=NULL)
 // forward references
 static int htoin(const char *value, int len);
 static int isxdig(char ch);
-BOOL prefetch_queue(const char *operation, char *patientid, const char *server, const char *studyuid, const char *seriesuid, const char *compress, 
+BOOL prefetch_queue(const char *operation, int N, char *patientid, const char *server, const char *studyuid, const char *seriesuid, const char *compress, 
 		    const char *modality, const char *date, const char *sop, const char *imagetype, const char *seriesdesc, int delay=0, const char *script=NULL);
 void reset_queue_fails(int N);
 
@@ -5912,7 +5913,7 @@ BOOL CallExportConverterN(char *pszFileName, int N, char *pszModality, char *psz
       /* converter: prefetch */
   
       else if (memicmp(line, "prefetch", 8)==0)
-      { if (prefetch_queue("prefetch", patid, "", "", "", "", "", "", "", "", "", 0, ""))
+      { if (prefetch_queue("prefetch", -1, patid, "", "", "", "", "", "", "", "", "", 0, ""))
           OperatorConsole.printf("Exportconverter%d.%d: queued prefetch %s\n", N, part, patid);
       }
   
@@ -6158,14 +6159,14 @@ BOOL CallExportConverterN(char *pszFileName, int N, char *pszModality, char *psz
 	line[11]=0;
 	if (sop) level = "single object";
 	if (DDO)
-	  if (prefetch_queue(line, patid, dest, studyuid, seriesuid, compress, modality, date, sop, imagetype, seriesdesc, delay, script))
+	  if (prefetch_queue(line, N, patid, dest, studyuid, seriesuid, compress, modality, date, sop, imagetype, seriesdesc, delay, script))
             OperatorConsole.printf("Exportconverter%d.%d: queued %s - (%s %s %s of %s) to %s\n", N, part, line, level, modality, date, patid, dest);
       }
   
       /* converter: preretrieve */
   
       else if (memicmp(line, "preretrieve ", 12)==0)
-      { if (prefetch_queue("preretrieve", patid, line+12, "", "", "", "", "", "", "", "", 0, ""))
+      { if (prefetch_queue("preretrieve", -1, patid, line+12, "", "", "", "", "", "", "", "", 0, ""))
           OperatorConsole.printf("Exportconverter%d.%d: queued preretrieve of patient %s from %s\n", N, part, patid, line+12);
       }
   
@@ -6269,7 +6270,7 @@ BOOL CallExportConverterN(char *pszFileName, int N, char *pszModality, char *psz
       /* converter: prefetch */
 
       else if (memicmp(line, "prefetch", 8)==0)
-      { if (prefetch_queue("prefetch", patid, "", "", "", "", "", "", "", "", "", 0, ""))
+      { if (prefetch_queue("prefetch", -1, patid, "", "", "", "", "", "", "", "", "", 0, ""))
           OperatorConsole.printf("Exportconverter%d.%d: queued prefetch %s\n", N, part, patid);
       }
 
@@ -10508,7 +10509,7 @@ int CallImportConverterN(DICOMCommandObject *DCO, DICOMDataObject *DDO, int N, c
     else if (memicmp(line, "prefetch", 8)==0)
     { char pat[256];
       SearchDICOMObject(DDO, "0010,0020", pat);
-      if (prefetch_queue("prefetch", pat, "", "", "", "", "", "", "", "", "", 0, ""))
+      if (prefetch_queue("prefetch", -1, pat, "", "", "", "", "", "", "", "", "", 0, ""))
         if (N >= -1) OperatorConsole.printf("%sconverter%d.%d: queued prefetch %s\n", ininame, N, part, pat);
     }
 
@@ -10517,7 +10518,7 @@ int CallImportConverterN(DICOMCommandObject *DCO, DICOMDataObject *DDO, int N, c
     else if (memicmp(line, "preretrieve ", 12)==0)
     { char pat[256];
       SearchDICOMObject(DDO, "0010,0020", pat);
-      if (prefetch_queue("preretrieve", pat, line+12, "", "", "", "", "", "", "", "", 0, ""))
+      if (prefetch_queue("preretrieve", -1, pat, line+12, "", "", "", "", "", "", "", "", 0, ""))
         if (N >= -1) OperatorConsole.printf("%sconverter%d.%d: queued preretrieve of patient %s from %s\n", ininame, N, part, pat, line+12);
     }
 
@@ -10747,7 +10748,7 @@ int CallImportConverterN(DICOMCommandObject *DCO, DICOMDataObject *DDO, int N, c
       if (sop) level = "single object";
       char pat[256];
       SearchDICOMObject(DDO, "0010,0020", pat);
-      if (prefetch_queue(line, pat, dest, studyuid, seriesuid, compress, modality, date, sop, imagetype, seriesdesc, delay, script))
+      if (prefetch_queue(line, -1, pat, dest, studyuid, seriesuid, compress, modality, date, sop, imagetype, seriesdesc, delay, script))
         if (N >= -1) OperatorConsole.printf("%sconverter%d.%d: queued %s - (%s %s %s of %s) to %s\n", ininame, N, part, line, level, modality, date, pat, dest);
     }
 
@@ -12262,28 +12263,35 @@ BOOL mayprefetchprocess(char *data, ExtendedPDU_Service *PDU, char *dum)
 ExtendedPDU_Service prefetchPDU; // for prefetch script context
 
 // enter prefetch or preforward request into queue
-BOOL prefetch_queue(const char *operation, char *patientid, const char *server, const char *studyuid, 
+BOOL prefetch_queue(const char *operation, int N, char *patientid, const char *server, const char *studyuid, 
 		    const char *seriesuid, const char *compress, const char *modality, const char *date, 
 		    const char *sop, const char *imagetype, const char *seriesdesc, int delay, const char *script)
 { char data[1000];
-  static struct conquest_queue *q = NULL;
+  static bool init=false;
+  static struct conquest_queue *q[MAXExportConverters+1];
+  if (!init) 
+  { for (int i=0; i<MAXExportConverters+1; i++) q[i]=NULL;
+    init = true;
+  }
+  if (N<-1) N = -1;
+  if (N>=MAXExportConverters) N = MAXExportConverters-1;
   
   if (delay==0) delay = ForwardCollectDelay;
 
-  if (!q) 
+  if (!q[N+1]) 
   { char szRootSC[64], szTemp[32];
 
   prefetchPDU.SetLocalAddress ( (BYTE *)"prefetch" );
   prefetchPDU.SetRemoteAddress ( (BYTE *)"prefetch" );
   prefetchPDU.ThreadNum = 0;
 
-    q = new_queue(QueueSize, 1000, 100, prefetchprocess, &prefetchPDU, 0);
-    q->mayprocess = mayprefetchprocess;
-    sprintf(q->failfile, "DelayedFetchForwardFailures%s", Port);
+    q[N+1] = new_queue(QueueSize, 1000, 100, prefetchprocess, &prefetchPDU, 0);
+    q[N+1]->mayprocess = mayprefetchprocess;
+    sprintf(q[N+1]->failfile, "DelayedFetchForwardFailures%s", Port);
 
     MyGetPrivateProfileString(RootConfig, "MicroPACS", RootConfig, szRootSC, 64, ConfigFile);
     MyGetPrivateProfileString(szRootSC, "MaximumDelayedFetchForwardRetries", "0", szTemp, 128, ConfigFile);
-    q->maxfails   = atoi(szTemp);
+    q[N+1]->maxfails   = atoi(szTemp);
   }
 
   memset(data, 0,  1000);
@@ -12296,7 +12304,7 @@ BOOL prefetch_queue(const char *operation, char *patientid, const char *server, 
   { strncpy(data+100, studyuid,  64);
     strncpy(data+165, seriesuid, 64);
     strncpy(data+230, server,   360);
-    return into_queue_unique(q, data, 490);
+    return into_queue_unique(q[N+1], data, 490);
   }
   else
   { strncpy(data+82,  server,    17);
@@ -12309,7 +12317,7 @@ BOOL prefetch_queue(const char *operation, char *patientid, const char *server, 
     strncpy(data+366, imagetype, 128);
     strncpy(data+500, seriesdesc,64);
     if (script) strncpy(data+570, script,    400);
-    return into_queue_unique(q, data, 992);
+    return into_queue_unique(q[N+1], data, 992);
   }
 }
 
@@ -23254,8 +23262,8 @@ void ServerTask(char *SilentText, ExtendedPDU_Service &PDU, DICOMCommandObject &
 		    }
 		  }
 		}
-		// prefetch_queue("submit patient ", SilentText+17, "", p, q, "", "", "", r1, r2, r3, 1, "call submit.cq");
-		if (r4) prefetch_queue("submit patient ", SilentText+17, "", p, q, "", "", "", r1, r2, r3, 1, r4);
+		// prefetch_queue("submit patient ", -1, SilentText+17, "", p, q, "", "", "", r1, r2, r3, 1, "call submit.cq");
+		if (r4) prefetch_queue("submit patient ", -1, SilentText+17, "", p, q, "", "", "", r1, r2, r3, 1, r4);
 		///// *
 		char	fields[2048];	
 		char	values[2048];	
