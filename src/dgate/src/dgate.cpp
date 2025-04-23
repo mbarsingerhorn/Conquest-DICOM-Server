@@ -1220,6 +1220,7 @@ Spectra0013 Wed, 5 Feb 2014 16:57:49 -0200: Fix cppcheck bugs #8 e #9
 20250407        mvh     Pass e.g. ExportConverter5 = forward study xxx to separate prefetch_queue 6
 20250413        mvh     Retry 60 times with increasing delay
 20250423        mvh     Added [lua]poststartup and [lua]timer events
+20250423        mvh     Fix for linux
 
 ENDOFUPDATEHISTORY
 */
@@ -13219,7 +13220,7 @@ void StartTimerThread(int ms)
   CreateThread(NULL, 2097152, (LPTHREAD_START_ROUTINE) timerthread, (void *)ms, 0, &ThreadID);
 #else
   pthread_t ThreadID;
-  pthread_create(&ThreadID, NULL, (void*(*)(void*))monitorthread, (void *)ms);
+  pthread_create(&ThreadID, NULL, (void*(*)(void*))timerthread, (void *)ms);
   pthread_detach(ThreadID);
 #endif
 }
