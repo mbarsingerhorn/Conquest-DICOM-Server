@@ -1218,6 +1218,8 @@ Spectra0013 Wed, 5 Feb 2014 16:57:49 -0200: Fix cppcheck bugs #8 e #9
 20240925        mvh     ---- RELEASE 1.5.0e -----
 20250405        mvh     Retry database connection in monitorthread
 20250407        mvh     Pass e.g. ExportConverter5 = forward study xxx to separate prefetch_queue 6
+20250413        mvh     Retry 60 times with increasing delay
+20250423        mvh     Added [lua]poststartup and [lua]timer events
 
 ENDOFUPDATEHISTORY
 */
@@ -13008,7 +13010,7 @@ SaveToDisk(Database	*DB, DICOMCommandObject *DCO, DICOMDataObject	*DDOPtr, char 
 
 static BOOL WINAPI monitorthread(char *folder)
 { Database DB;
-  int count=10;
+  int count=0;
   ExtendedPDU_Service PDU; // for script context of monitoring thread
   PDU.SetLocalAddress ( (BYTE *)"monitor" );
   PDU.SetRemoteAddress ( (BYTE *)"monitor" );
@@ -13016,8 +13018,8 @@ static BOOL WINAPI monitorthread(char *folder)
 	{
 	count++;
 	OperatorConsole.printf("***Monitorthread: error Connecting to SQL\n");
-	Sleep(1000);
-	if (count==10) return ( FALSE );
+	Sleep(1000*count);
+	if (count==60) return ( FALSE );
 	}
 
   while (TRUE)
@@ -13181,6 +13183,45 @@ void StartZipThread(void)
 void StopZipThread(void)
 { GoZipThread = FALSE;
   Sleep(2000);
+}
+
+BOOL firsttimer=TRUE;
+
+static BOOL WINAPI timerthread(int ms)
+{ while (TRUE)
+  { char cmd[1024];
+    Sleep(ms);
+    if (firsttimer)
+    { MyGetPrivateProfileString("lua", "poststartup", "", cmd, 1024, ConfigFile);
+      firsttimer = FALSE;
+      Sleep(5000);
+    }
+    else
+      MyGetPrivateProfileString("lua", "timer", "", cmd, 1024, ConfigFile);
+    if (cmd[0])
+    { EnterCriticalSection(&dolua_critical);
+      globalPDU.SetLocalAddress ( (BYTE *)"timer" );
+      globalPDU.SetRemoteAddress ( (BYTE *)"timer" );
+      globalPDU.ThreadNum = 1;
+      struct scriptdata sd = {&globalPDU, NULL, NULL, 0, NULL, NULL, NULL, NULL, NULL, 0, 0};
+      if (cmd[0]) do_lua(&(globalPDU.L), cmd, &sd);
+      LeaveCriticalSection(&dolua_critical);
+    }
+  }
+
+  return TRUE;
+}
+
+void StartTimerThread(int ms)
+{ 
+#ifdef WIN32
+  unsigned long ThreadID;
+  CreateThread(NULL, 2097152, (LPTHREAD_START_ROUTINE) timerthread, (void *)ms, 0, &ThreadID);
+#else
+  pthread_t ThreadID;
+  pthread_create(&ThreadID, NULL, (void*(*)(void*))monitorthread, (void *)ms);
+  pthread_detach(ThreadID);
+#endif
 }
 
 // some help for the simple user
@@ -23457,7 +23498,7 @@ void ServerTask(char *SilentText, ExtendedPDU_Service &PDU, DICOMCommandObject &
 		}
 		}
 	}
-
+	
 BOOL StorageApp	::	ServerChild (int theArg, unsigned int ConnectedIP )
 	{
 	ExtendedPDU_Service	PDU ( SOPClassFile );
@@ -23564,7 +23605,7 @@ BOOL StorageApp	::	ServerChild (int theArg, unsigned int ConnectedIP )
 	if (sd1.DDO) delete sd1.DDO;
 	if (sd1.rc==2 || sd1.rc==6) return TRUE; // reject association
 
-	// pass the DB to the read ahead thread for getting filenames.
+	  // pass the DB to the read ahead thread for getting filenames.
 	// NOTE: THIS MEANS THAT THE DB MAY NOT BE USED WHILE RATD IS ACTIVE TO BE THREAD SAFE
 	ratd.DB = &DB1;
 
@@ -24554,6 +24595,8 @@ main ( int	argc, char	*argv[] )
 			struct stat statbuf;
 			char TimeString[100], buf[64];
 			int iNbConverters;
+			
+			StartTimerThread(1000);
 
 			UNUSED_ARGUMENT(buf);//Stop gcc4.2 warning bcb
 			memset((void *)&statbuf, 0, sizeof(statbuf));
