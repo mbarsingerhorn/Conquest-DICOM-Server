@@ -698,6 +698,7 @@ When            Who     What
 20240923        mvh     Check ladle button when opening webviewer
 20240924        lncoll  Allow simple comments in acrnema.map; wordwrap its editor
 20240924        mvh     1.5.0e release
+20250702        mvh     Fix zero results error in query
 
 Todo for odbc: dgate64 -v "-sSQL Server;DSN=conquest;Description=bla;Server=.\SQLEXPRESS;Database=conquest;Trusted_Connection=Yes"
 Update -e command
@@ -734,7 +735,7 @@ uses
 {************************************************************************}
 
 const VERSION = '1.5.0e';
-const BUILDDATE = '20240924';
+const BUILDDATE = '20250702';
 const testmode = 0;
 
 {************************************************************************}
@@ -8877,6 +8878,7 @@ begin
     'local s=tempfile("txt") f=io.open(s, "wb");' +
     'if r2==nil then f:write("no connection with "..ae.."\n") returnfile=s f:close() return end; ' +
     'local r = loadstring("return "..r2:Serialize())();' +
+    'if #r==0 then f:write("(no results)\n") returnfile=s f:close() return end;' +
     'r[1].QueryRetrieveLevel=nil; r[1].TransferSyntaxUID=nil; '+
     'local keys={} for k,v in pairs(r[1]) do if type(v)~="table" then keys[#keys+1]=k end end; '+
     'table.sort(keys, function(a, b) return string.sub(a, 1, 7)<string.sub(b, 1, 7) end); ' +
@@ -8902,8 +8904,11 @@ begin
     first := false;
   until length(s)=0;
 
-  Memo1.Lines.Add(    '---------------------------------------------------------------------------------------------------------------------------------------------------------------');
-  Memo1.Lines.Add(    'Total of ' + IntToStr(total-1) + ' item(s) found');
+  if total>0 then
+  begin
+    Memo1.Lines.Add(    '---------------------------------------------------------------------------------------------------------------------------------------------------------------');
+    Memo1.Lines.Add(    'Total of ' + IntToStr(total-1) + ' item(s) found');
+  end;
   strings.Free;
 end;
 
