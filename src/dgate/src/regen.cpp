@@ -55,6 +55,7 @@ mvh 20100111: Merged; fixed WIN32 changes
 mvh 20120630: Regen now allows files without 3 letter extension
 mvh 20201224: Added regen and regenFail converter
 mvh 20220206: Allow regen of selected folders/files (pass own * wildcards to RegenDir)
+mvh 20250718: Added TestDICOM to avoid loading loads of invalid files
 */
 
 // #define MULTITHREAD
@@ -98,6 +99,23 @@ BOOL IsDirectory(char *path)
 	}
 #endif
 
+// Test if a file is DICOM
+static int 
+TestDICOM(char *Path)
+	{
+	FILE *f;
+	int res;
+	char buffer[132];
+
+	f = fopen(Path, "rb");
+	if (f==NULL) return -1;
+
+	fread(buffer, 1, 132, f);
+  	fclose(f);
+
+	return (buffer[128]=='D' && buffer[129]=='I' && buffer[130]=='C' && buffer[131]=='M')?1:0;
+	}
+
 // This routine checks the file extension and only accepts v2=raw, dcm/img=chapter 10 (or other)
 
 extern "C" void lua_setvar(ExtendedPDU_Service *pdu, char *name, char *value);
@@ -131,6 +149,8 @@ RegenToDatabase(Database *DB, char *basename, char *filename, const char *device
 	         strchr(filename + len - 4, '.')==NULL
 		)
 		{
+		if (TestDICOM(filename)!=1) return (FALSE);
+		
 		pDDO = PDU.LoadDICOMDataObject(filename);
 		if(!pDDO)
 			{

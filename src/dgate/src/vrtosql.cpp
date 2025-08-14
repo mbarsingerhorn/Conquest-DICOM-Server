@@ -82,6 +82,7 @@
 20220817        mvh     Private tags for query limit (9999,0c01) and offset (9999,0c02), report sorting
 20220820        mvh     Overhaul of sorting code
 20230620        mvh     Fix sorting code for PostGres; use CAST and pass expression to columnstring through OrderExp
+20250814        mvh     Prepend TableName to sort field in ColumnString and sort string in OrderCalc
 */
 
 #ifndef	WHEDGE
@@ -865,7 +866,9 @@ BOOL	QueryOnPatient (
                                 }
                                 else
 				{ Order[10]=0;
-			          strcpy(OrderCalc, Order);
+			          strcpy(OrderCalc, PatientTableName);
+			          strcat(OrderCalc, ".");
+			          strcat(OrderCalc, Order);
 				}
 			        strcpy(OrderExp, OrderCalc);
 				delete vr;
@@ -1290,7 +1293,9 @@ BOOL	QueryOnStudy (
                                 }
                                 else
 				{ Order[10]=0;
-			          strcpy(OrderCalc, Order);
+			          strcpy(OrderCalc, StudyTableName);
+			          strcat(OrderCalc, ".");
+			          strcat(OrderCalc, Order);
 				}
 			        strcpy(OrderExp, OrderCalc);
 				delete vr;
@@ -1713,7 +1718,9 @@ BOOL	QueryOnSeries (
                                 }
                                 else
 				{ Order[10]=0;
-			          strcpy(OrderCalc, Order);
+			          strcpy(OrderCalc, SeriesTableName);
+			          strcat(OrderCalc, ".");
+			          strcat(OrderCalc, Order);
 				}
 			        strcpy(OrderExp, OrderCalc);
 				delete vr;
@@ -2189,7 +2196,9 @@ BOOL	QueryOnImage (
                                 }
                                 else
 				{ Order[10]=0;
-			          strcpy(OrderCalc, Order);
+			          strcpy(OrderCalc, ImageTableName);
+			          strcat(OrderCalc, ".");
+			          strcat(OrderCalc, Order);
 				}
 			        strcpy(OrderExp, OrderCalc);
 				delete vr;
