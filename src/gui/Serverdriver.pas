@@ -699,6 +699,7 @@ When            Who     What
 20240924        lncoll  Allow simple comments in acrnema.map; wordwrap its editor
 20240924        mvh     1.5.0e release
 20250702        mvh     Fix zero results error in query
+20250831        mvh     1.5.0f release
 
 Todo for odbc: dgate64 -v "-sSQL Server;DSN=conquest;Description=bla;Server=.\SQLEXPRESS;Database=conquest;Trusted_Connection=Yes"
 Update -e command
@@ -734,8 +735,8 @@ uses
 {*                              CONSTANTS                               *}
 {************************************************************************}
 
-const VERSION = '1.5.0e';
-const BUILDDATE = '20250702';
+const VERSION = '1.5.0f';
+const BUILDDATE = '20250831';
 const testmode = 0;
 
 {************************************************************************}

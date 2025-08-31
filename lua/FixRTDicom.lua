@@ -5,6 +5,7 @@
 -- Marcel van Herk, 20210422: fix for Varian, use '' in dbase access; attaches to MIP
 -- 20220321: allow CT to be in different study (assumes on CT per patient ID)
 -- 20220322: evo+mvh search UIDs on slice location to ensure correct order
+-- 20240311: mvh (evo+rr) breaking the assumption of the patient id being the same for rtstruct!
 
 -- gets sop of rtplan for this study - note assumes there is only one
 function getrtplan(data)
@@ -58,6 +59,18 @@ end;
 function getstudy(data)
   local StudyUID = data.StudyInstanceUID;
   return StudyUID;
+end;
+
+-- gets patient ID for this study
+local ctseries=''
+function getpatientid(data)
+  local StudyUID = data.StudyInstanceUID;
+  local db = dbquery('DICOMStudies', 'PatientID', "StudyInsta = '"..StudyUID.."'")
+  if #db>0 then 
+    return db[1][1]
+  else 
+    return data.PatientID;
+  end
 end;
 
 -- returns correct CT slice sop for incorrect CT slice sop in RTSTRUCT
@@ -118,6 +131,8 @@ end;
 -- process RTSTRUCT, prints UIDS, referenced UIDS and new referenced UIDS
 if Data.Modality=='RTSTRUCT' then
   local i, j, k;
+  
+  Data.PatientID = getpatientid(Data)
 
   -- print sops
   print('*** Processing RTSTRUCT for patient ' .. Data.PatientName .. ' ' .. Data.PatientID);

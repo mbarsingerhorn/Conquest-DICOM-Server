@@ -39,6 +39,7 @@
 -- mvh 20240107 Fixed HTTP 200 OK response
 -- mvh 20240924 Reset request after quit to avoid failure to restart
 -- mvh 20240928 Export md5
+-- mvh 20250525 Export os if mode=service
 
 -----------------------------------------------------
 
@@ -458,6 +459,9 @@ function luascript.genEnv(_Env, request, config, handleIt, client)
 	Env.math=math
 	Env.tempfile=tempfile
 	Env.md5=md5
+        if string.find(request.orguri, 'mode=service') then
+  	  Env.os=os
+	end
 	Env.writefile=function(nam, dat) local f=io.open(nam, 'wb') f:write(dat) f:close() end
 	Env.unlink=function(nam) os.remove(nam) end
 	Env.JSON=require('json')

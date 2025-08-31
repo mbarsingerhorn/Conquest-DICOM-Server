@@ -60,6 +60,7 @@
 -- 20230903 Fix test on web folder
 -- 20230909 Fixes in string processing in runLocal mode
 -- 20230909 Fixed passing port to dicom.ini
+-- 20250425 Some fixed for runlocal (ladle)
 
 local server = 'unknown'
 local sep, dsep = '\\', '\\\\'
@@ -112,7 +113,9 @@ end
 function runquiet(s)
   local f=io.popen(s); 
   if f then 
-    return f:read('*all')
+    local s = f:read('*all')
+    f:close()
+    return s
   else 
     return ''
   end
@@ -142,7 +145,7 @@ function editfile(f, mask, value)
     local s=''
     for x in io.lines(f) do 
       x = string.gsub(x, mask, value)
-      s = s..x.."\r\n" 
+      s = s..x.."\n" 
     end
     local h=io.open(f, [[wt]])
     if h then h:write(s) h:close() end
@@ -250,9 +253,9 @@ end
 -- execute statement in context of the service control server (with more rights)
 function sendservercommand(f)
   if runLocal and dgate=='dgate' then 
-    runquiet('sudo '..f)
+    return runquiet('sudo '..f)
   elseif runLocal then 
-    runquiet(f)
+    return runquiet(f)
   else
     return servercommand("lua:f=io.popen([["..f.."]]) r=f:read('*all') f:close() s='"..server.."x.txt' f=io.open(s, 'wt') f:write(r) returnfile=s f:close()")
   end
@@ -2330,7 +2333,7 @@ if false then
       [[?mode=start', 'blank')">Enter cgi interface</a>]])
   else
     -- ladle link
-    HTML([[<a href=# onclick="javascript:w=window.open('http://127.0.0.1:8086/cgi-bin/]]..script_name..[[?mode=start', 'blank')">Enter server's ladle web interface</a>]])
+    HTML([[<a href=# onclick="javascript:w=window.open('http://127.0.0.1:8086/app/newweb/', 'blank')">Enter server's ladle web interface</a>]])
   end
 end
 
@@ -2340,7 +2343,7 @@ if write==nil then
     [[, 'blank')">Enter app interface</a>]])
 else
   -- ladle link
-  HTML([[<a href=# onclick="javascript:w=window.open('http://127.0.0.1:8086/cgi-bin/]]..script_name..[[?mode=start', 'blank')">Enter server's ladle web interface</a>]])
+  HTML([[<a href=# onclick="javascript:w=window.open('http://127.0.0.1:8086/app/newweb/', 'blank')">Enter server's ladle web interface</a>]])
 end
 
 HTML([[<tr>]])

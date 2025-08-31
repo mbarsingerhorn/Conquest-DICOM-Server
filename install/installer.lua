@@ -17,6 +17,7 @@
 -- mvh 20230916 Changed input order for linker for older gcc; add /usr/sbin to apache command paths
 -- mvh 20230919 Fixed dbaseiii config; added null database
 -- mvh 20230920 Small reconfigure of above; -r recompiles without asking
+-- mvh 20250415 Irrelevant typos in defaults for updatign compression
 
 package.path = package.path .. ';../lua/?.lua'
 --package.cpath = package.path .. ';clibs/lib?.so'
@@ -185,7 +186,7 @@ function editfile(f, mask, value)
     x = string.gsub(x, '\n', '')
     x = string.gsub(x, '\r', '')
     x = string.gsub(x, mask, value)
-    s = s..x.."\r\n" 
+    s = s..x.."\n" 
   end
   local h=io.open(f, [[wt]])
   if h then h:write(s) h:close() end
@@ -1365,8 +1366,8 @@ else
       editfile(server..'/dicom.ini', '(MyACRNema *= ).*', '%1' .. (myconf.AE or CGI('AE', servername)))
       editfile(server..'/dicom.ini', '(TCPPort *= ).*', '%1' .. (myconf.PORT or CGI('PORT', serverport)))
                         
-      editfile(server..'/dicom.ini', '(DroppedFileCompression *= ).*', '%1' .. (myconf.CP or CGI('CP', serverport)))
-      editfile(server..'/dicom.ini', '(IncomingCompression *= ).*', '%1' .. (myconf.CP or CGI('CP', serverport)))
+      editfile(server..'/dicom.ini', '(DroppedFileCompression *= ).*', '%1' .. (myconf.CP or CGI('CP', 'UN')))
+      editfile(server..'/dicom.ini', '(IncomingCompression *= ).*', '%1' .. (myconf.CP or CGI('CP', 'UN')))
                         
       editfile(server..'/dicom.ini', '(FileNameSyntax *= ).*', '%1' .. (myconf.FN or CGI('FN', '9')))
       editfile(server..'/dicom.ini', '(MAGDevice0 *= ).*', '%1' .. (myconf.M0 or CGI('M0', server .. '/data' .. sep)))

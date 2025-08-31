@@ -1221,11 +1221,12 @@ Spectra0013 Wed, 5 Feb 2014 16:57:49 -0200: Fix cppcheck bugs #8 e #9
 20250413        mvh     Retry 60 times with increasing delay
 20250423        mvh     Added [lua]poststartup and [lua]timer events
 20250423        mvh     Fix for linux
+20250831        mvh	---- RELEASE 1.5.0f
 
 ENDOFUPDATEHISTORY
 */
 
-#define DGATE_VERSION "1.5.0e"
+#define DGATE_VERSION "1.5.0f"
 
 //#define DO_LEAK_DETECTION	1
 //#define DO_VIOLATION_DETECTION	1
