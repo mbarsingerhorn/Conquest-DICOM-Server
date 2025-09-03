@@ -46,7 +46,7 @@ export opt='sqlite'
 			gcc -c -DTHREADSAFE=1 -DHAVE_USLEEP $SRC/sqlite3/sqlite3.c -I$SRC/sqlite3 -o $SRC/sqlite3.o;
 			#g++ -std=c++11 -o $SRC/charls.o -c $SRC/charls/all.cpp -I$SRC/charls -Wno-deprecated-declarations
 			#gcc -o $SRC/openjpeg.o -c $SRC/openjpeg/all.c -I$SRC/openjpeg
-			g++ $FLAGS -DUSESQLITE $SRC/sqlite3.o $OBS -o dgate $SRC/src/total.cpp $LUA $INCS -I$SRC/sqlite3;
+			g++ $FLAGS -DUSESQLITE -DNOINTJPEG $SRC/sqlite3.o $OBS -o dgate $SRC/src/total.cpp $LUA $INCS -I$SRC/sqlite3;
 			rm $SRC/sqlite3.o;
 
 	[ -f $SRC/lua.o ] && rm $SRC/lua.o;
