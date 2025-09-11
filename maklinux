@@ -18,6 +18,7 @@
 # mvh 20220827 Better warning, add linux scripts
 # mvh 20220829 Compile servertask here and copy to web
 # mvh 20230902 Create printer_files folder here such that is does not belong to root
+# mvh 20250911 Fallback for failed jpeg-c ./configure on debian 13
 
 export CONQUEST=$(pwd)
 export CONQUESTTEMP=$CONQUEST/temp
@@ -38,6 +39,8 @@ OBS="$SRC/charls.o $SRC/openjpeg.o";
 #sudo mkdir /usr/local/man.man1
 chmod 777 src/dgate/jpeg-6c/configure
 cd src/dgate/jpeg-6c
+cp makefile.linux Makefile
+cp jconfig.linux jconfig.h
 ./configure
 make
 echo "#### Please ignore the errors below"

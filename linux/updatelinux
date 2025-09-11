@@ -1,6 +1,7 @@
 #!/bin/bash
 # mvh just compiles or recompiles sqlite and (re)install as service; uses newweb as html not cgi-bin
 # mvh 20220829 Compile servertask here and copy to web
+# mvh 20250911 Fallback for failed jpeg-c ./configure on debian 13
 
 export CONQUEST=$(pwd)
 export CONQUESTTEMP=$CONQUEST/temp
@@ -21,6 +22,8 @@ OBS="$SRC/charls.o $SRC/openjpeg.o";
 #sudo mkdir /usr/local/man.man1
 chmod 777 src/dgate/jpeg-6c/configure
 cd src/dgate/jpeg-6c
+cp makefile.linux Makefile
+cp jconfig.linux jconfig.h
 ./configure
 make
 echo "#### Please ignore the errors below"

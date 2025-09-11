@@ -15,6 +15,7 @@
 # mvh 20200308 Write temp folder and conquest folders where needed;
 # mvh 20200310 Do overwrite dicom.ini, but make backup first
 # mvh 20200311 Lost mariadb change, use mariadb and mysql include folders for ubuntu14 compatibility
+# mvh 20250911 Fallback for failed jpeg-c ./configure on debian 13
 
 export CONQUEST=$(pwd)
 export CONQUESTTEMP=$CONQUEST/temp
@@ -35,6 +36,8 @@ OBS="$SRC/charls.o $SRC/openjpeg.o";
 #sudo mkdir /usr/local/man.man1
 chmod 777 src/dgate/jpeg-6c/configure
 cd src/dgate/jpeg-6c
+cp makefile.linux Makefile
+cp jconfig.linux jconfig.h
 ./configure
 make
 echo Please ignore the errors below

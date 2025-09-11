@@ -61,6 +61,7 @@
 -- 20230909 Fixes in string processing in runLocal mode
 -- 20230909 Fixed passing port to dicom.ini
 -- 20250425 Some fixed for runlocal (ladle)
+-- 20250911 Fallback for failed jpeg-c ./configure on debian 13
 
 local server = 'unknown'
 local sep, dsep = '\\', '\\\\'
@@ -1062,7 +1063,7 @@ function subfunctions(param, conf)
     if dgate=='dgate' then
       sendservercommand('mkdir -p '..server..'src/dgate/build')
       sendservercommand('rm -f '..server..'src/dgate/build/libjpeg.a')
-      sendservercommand('sh -c "cd '..server..'src/dgate/jpeg-6c ; ./configure; make; cp libjpeg.a '..server..'src/dgate/build"')
+      sendservercommand('sh -c "cd '..server..'src/dgate/jpeg-6c;cp makefile.linux Makefile;cp jconfig.linux jconfig.h;./configure; make; cp libjpeg.a '..server..'src/dgate/build"')
       if fileexists(server..'src/dgate/build'..'/libjpeg.a') then
         print('[OK] compiled jpeg library')
       end

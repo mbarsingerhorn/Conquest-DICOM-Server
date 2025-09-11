@@ -18,6 +18,7 @@
 -- mvh 20230919 Fixed dbaseiii config; added null database
 -- mvh 20230920 Small reconfigure of above; -r recompiles without asking
 -- mvh 20250415 Irrelevant typos in defaults for updatign compression
+-- mvh 20250911 Fallback for failed jpeg-c ./configure on debian 13
 
 package.path = package.path .. ';../lua/?.lua'
 --package.cpath = package.path .. ';clibs/lib?.so'
@@ -228,7 +229,7 @@ function compile(param, conf, server)
   if param=='jpeg6c' then
     runquiet('mkdir -p '..server..'/src/dgate/build')
     runquiet('rm -f '..server..'/src/dgate/build/libjpeg.a')
-    runquiet('sh -c "cd '..server..'/src/dgate/jpeg-6c; chmod 777 configure; ./configure; make; cp libjpeg.a '..server..'/src/dgate/build"')
+    runquiet('sh -c "cd '..server..'/src/dgate/jpeg-6c; chmod 777 configure;cp makefile.linux Makefile;cp jconfig.linux jconfig.h; ./configure; make; cp libjpeg.a '..server..'/src/dgate/build"')
     if fileexists(server..'/src/dgate/build'..'/libjpeg.a') then
       print('[OK] Compiled jpeg library')
     end
