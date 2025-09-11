@@ -1222,6 +1222,8 @@ Spectra0013 Wed, 5 Feb 2014 16:57:49 -0200: Fix cppcheck bugs #8 e #9
 20250423        mvh     Added [lua]poststartup and [lua]timer events
 20250423        mvh     Fix for linux
 20250831        mvh	---- RELEASE 1.5.0f
+20250909        mvh	Added OffsetDatesInDICOMObject; offsetdates import converter
+20250910        mvh	Only change when date scanned correctly
 
 ENDOFUPDATEHISTORY
 */
@@ -3224,6 +3226,130 @@ MergeUIDofDDO(DICOMDataObject *pDDO, const char *type, const char *Reason)
 		return ( FALSE );
 		}
 
+	return ( TRUE );
+	}
+
+// Modify all dates in a DICOM object, except those in the passed string as given; and replace given VR's
+// g,e|g,e|g,e=Date|
+
+static BOOL
+OffsetDatesInDICOMObject(DICOMObject *DO, const char *Exceptions, int Offset, Database *db=NULL)
+	{
+	DICOMObject	DO2;
+	VR		*vr;
+	int		TypeCode;
+	unsigned int	Index;
+	char		desc[64], name[20];
+	char		*p;
+	char 		s[66], NewDate[255];
+	int 		len;
+	const char	*cp;
+	Database        DB;
+	struct 		tm tmbuf;
+	    
+	if (!db)
+        { if (!DB.Open ( DataSource, UserName, Password, DataHost ) )
+		{
+		SystemDebug.printf("***Unable to connect to SQL\n");
+		return ( FALSE );
+		}
+	  db = &DB;
+	}
+
+	while((vr=DO->Pop()))
+		{
+		sprintf(name, "%04x,%04x=", vr->Group, vr->Element);
+		cp = strstr(Exceptions, name);
+		if (cp)
+			{
+			strncpy(NewDate, cp+10, 65);
+			p = strchr(NewDate, '|');
+			if (p) *p=0;
+			OperatorConsole.printf("[OffsetDatesInDICOMObject] setting %04x,%04x\n", vr->Group, vr->Element);
+			len = strlen(NewDate); if (len&1) { len++; NewDate[len-1]=' '; }
+		        vr->ReAlloc(len);
+			memcpy(vr->Data, NewDate, len);
+			}
+		else
+			{
+			TypeCode = VRType.RunTimeClass(vr->Group, vr->Element, desc);
+    			
+			if (TypeCode=='DA')
+				{
+				memcpy(s, vr->Data, vr->Length);
+				s[vr->Length]=0;
+
+				sprintf(name, "%04x,%04x|", vr->Group, vr->Element);
+
+				if (!strstr(Exceptions, name) && vr->Length<=64)
+					{
+					SystemDebug.printf("[OffsetDatesInDICOMObject] changing %04x,%04x (%s)\n", vr->Group, vr->Element, desc);
+					memset(&tmbuf, 0, sizeof(tmbuf));
+					memcpy(s, vr->Data, vr->Length);
+					s[vr->Length]=0;
+					if (sscanf(s, "%04d%02d%02d", &tmbuf.tm_year, &tmbuf.tm_mon, &tmbuf.tm_mday)==3) {
+						tmbuf.tm_year -= 1900;
+		
+						time_t t = mktime(&tmbuf);
+						t += 24*3600*Offset;
+						localtime_r(&t, &tmbuf);
+		
+						sprintf(NewDate, "%04d%02d%02d", tmbuf.tm_year+1900, tmbuf.tm_mon, tmbuf.tm_mday);
+						len = strlen(NewDate); if (len&1) { len++; NewDate[len-1]=' '; }
+						vr->ReAlloc(len);
+						memcpy(vr->Data, NewDate, len);
+						}
+					}
+				}
+			
+    			if (TypeCode=='DT')
+				{
+				memcpy(s, vr->Data, vr->Length);
+				s[vr->Length]=0;
+
+				sprintf(name, "%04x,%04x|", vr->Group, vr->Element);
+
+				if (!strstr(Exceptions, name) && vr->Length<=64)
+					{
+					SystemDebug.printf("[OffsetDatesInDICOMObject] changing %04x,%04x (%s)\n", vr->Group, vr->Element, desc);
+					memset(&tmbuf, 0, sizeof(tmbuf));
+					memcpy(s, vr->Data, vr->Length);
+					s[vr->Length]=0;
+					if (sscanf(s, "%04d%02d%02d", &tmbuf.tm_year, &tmbuf.tm_mon, &tmbuf.tm_mday)==3) {
+						tmbuf.tm_year -= 1900;
+		
+						time_t t = mktime(&tmbuf);
+						t += 24*3600*Offset;
+						localtime_r(&t, &tmbuf);
+		
+						sprintf(NewDate, "%04d%02d%02d", tmbuf.tm_year+1900, tmbuf.tm_mon, tmbuf.tm_mday);
+						memcpy(s, NewDate, 8);
+					
+						memcpy(vr->Data, s, vr->Length);
+						}
+					}
+				}
+			}
+
+		if ( vr->SQObjectArray )
+			{
+			Array < DICOMDataObject * > *ADDO =
+				(Array<DICOMDataObject*>*) vr->SQObjectArray;
+			
+			Index = 0;
+			while ( Index < ADDO->GetSize() )
+				{
+				OffsetDatesInDICOMObject(ADDO->Get(Index), Exceptions, Offset, db);
+				++Index;
+				}
+			}
+		DO2.Push(vr);
+		}
+	DO->Reset();
+	while((vr=DO2.Pop()))
+		{
+		DO->Push(vr);
+		}
 	return ( TRUE );
 	}
 
@@ -10240,6 +10366,21 @@ int CallImportConverterN(DICOMCommandObject *DCO, DICOMDataObject *DDO, int N, c
 
     else if (memicmp(line, "olduids", 7)==0)
     { OldUIDsInDICOMObject(DDO, "", NULL, NULL);
+      if (N >= -1) OperatorConsole.printf("%sconverter%d.%d executes: %s\n", ininame, N, part, line);
+    }
+
+    /* converter: offset dates N {except g,e|g,e=yyyymmdd}*/
+
+    else if (memicmp(line, "offset dates ", 13)==0)
+    { char tmp[1024];
+      int N = atoi(line+13);
+      char *p = strstr(line, "except ");
+      tmp[0]=0;
+      if (p) 
+      { strcpy(tmp, p+7);
+        strcat(tmp, "|");
+      }
+      OffsetDatesInDICOMObject(DDO, tmp, N, NULL);
       if (N >= -1) OperatorConsole.printf("%sconverter%d.%d executes: %s\n", ininame, N, part, line);
     }
 
