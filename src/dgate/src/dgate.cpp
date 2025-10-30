@@ -12449,7 +12449,7 @@ BOOL prefetch_queue(const char *operation, int N, char *patientid, const char *s
   { strncpy(data+100, studyuid,  64);
     strncpy(data+165, seriesuid, 64);
     strncpy(data+230, server,   360);
-    return into_queue_unique(q[N+1], data, 490);
+    return into_queue_unique(q[N+1], data, 590);
   }
   else
   { strncpy(data+82,  server,    17);
